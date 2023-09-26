@@ -1,0 +1,7 @@
+langchain
+google-search-results
+openai
+unstructured[docx,pdf,pptx]
+chromadb
+tiktoken
+git+https://github.com/mtybadger/chromaviz/
