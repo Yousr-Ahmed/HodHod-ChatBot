@@ -1,4 +1,3 @@
-# @title Import libraries
 import os
 import shutil
 from typing import List
@@ -15,65 +14,52 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from pydantic import BaseModel
 
-# @title Save Environment Variables
-# Set this to `azure`
-os.environ["OPENAI_API_TYPE"] = "azure"
-# The API version you want to use: set this to `2023-07-01` for the released version.
-os.environ["OPENAI_API_VERSION"] = "2023-07-01-preview"
-# The base URL for your Azure OpenAI resource.  You can find this in the Azure portal under your Azure OpenAI resource.
-os.environ["OPENAI_API_BASE"] = "https://hodhod-gpt.openai.azure.com/"
-# The API key for your Azure OpenAI resource.  You can find this in the Azure portal under your Azure OpenAI resource.
-os.environ["OPENAI_API_KEY"] = "d4eb4cb7f64646adb412ef89799ad89b"
-
-os.environ[
-    "SERPAPI_API_KEY"
-] = "0f5445227ca55099fe1b2bff1d58e3cd1731ad999510d2f1eac5315cb393e7f3"
-
-os.environ["DEPLOYMENT_NAME"] = "Hodhod_Assistant"
-
-persist_directory = "db"
-azure_embeddings_deployment_name = "ADA-Hodhod"
+from config import persist_directory, azure_embeddings_deployment_name
 
 model = AzureChatOpenAI(
     deployment_name=os.getenv("DEPLOYMENT_NAME"),
 )
-embeddings = OpenAIEmbeddings(deployment=azure_embeddings_deployment_name)
+embedding_model = OpenAIEmbeddings(deployment=azure_embeddings_deployment_name)
 tools = load_tools(["serpapi", "llm-math"], llm=model)
 
-# Print number of txt files in directory
-loader = DirectoryLoader("", glob="Documents/*.*")
-documents = loader.load()
 
-# Splitting the text into chunks
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
-texts = text_splitter.split_documents(documents)
+def create_vdb_search_tool():
+    # Print number of txt files in directory
+    loader = DirectoryLoader("", glob="Documents/*.*")
+    documents = loader.load()
 
-print(
-    f"Number of Documents = {len(documents)}",
-    f"Number of Chunks = {len(texts)}",
-    sep="\n",
-)
+    # Splitting the text into chunks
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
+    texts = text_splitter.split_documents(documents)
 
-vector_db = Chroma.from_documents(
-    documents=texts, embedding=embeddings, persist_directory=persist_directory
-)
+    print(
+        f"Number of Documents = {len(documents)}",
+        f"Number of Chunks = {len(texts)}",
+        sep="\n",
+    )
 
-vector_db_search = RetrievalQA.from_chain_type(
-    llm=model,
-    chain_type="stuff",
-    retriever=vector_db.as_retriever(),
-    verbose=True,
-    return_source_documents=True,
-    input_key="question",
-)
+    vector_db = Chroma.from_documents(
+        documents=texts, embedding=embedding_model, persist_directory=persist_directory
+    )
 
-tools.append(
-    Tool(
+    vector_db_search = RetrievalQA.from_chain_type(
+        llm=model,
+        chain_type="stuff",
+        retriever=vector_db.as_retriever(),
+        verbose=True,
+        return_source_documents=True,
+        input_key="question",
+    )
+
+    vector_db_search_tool = Tool(
         name="Obeikan QA System",
         func=lambda query: vector_db_search({"question": query}),
         description="useful for when you need to answer questions about the Obeikan. Input should be a fully formed question. Output will be include the source document.",
-    ),
-)
+    )
+    return vector_db_search_tool
+
+
+tools.append(create_vdb_search_tool())
 
 # Define the API
 app = FastAPI()
@@ -121,6 +107,11 @@ async def upload_files(files: List[UploadFile] = File(...)):
     for file in files:
         with open(f"Documents/{file.filename}", "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+
+    create_vdb_search_tool()
+    global tools
+    tools[-1] = create_vdb_search_tool()
+
     return {"detail": f"Files {', '.join(files_name)} uploaded successfully"}
 
 
