@@ -5,3 +5,4 @@ unstructured[docx,pdf,pptx]
 chromadb
 tiktoken
 git+https://github.com/mtybadger/chromaviz/
+python-decouple
