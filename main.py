@@ -29,7 +29,7 @@ def create_vdb_search_tool():
     documents = loader.load()
 
     # Splitting the text into chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=100)
     texts = text_splitter.split_documents(documents)
 
     print(
@@ -120,5 +120,8 @@ async def upload_files(files: List[UploadFile] = File(...)):
 def delete_files(file_name: str):
     if file_name in os.listdir("Documents"):
         os.remove(f"Documents/{file_name}")
+        create_vdb_search_tool()
+        global tools
+        tools[-1] = create_vdb_search_tool()
         return {"detail": f"File {file_name} deleted successfully"}
     return {"detail": f"File {file_name} not found"}
