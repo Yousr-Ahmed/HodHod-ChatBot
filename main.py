@@ -21,6 +21,7 @@ model = AzureChatOpenAI(
 )
 embedding_model = OpenAIEmbeddings(deployment=azure_embeddings_deployment_name)
 tools = load_tools(["serpapi", "llm-math"], llm=model)
+os.makedirs("Documents", exist_ok=True)
 
 
 def create_vdb_search_tool():
@@ -85,7 +86,7 @@ def new_chat():
     )
     new_id = len(dic) + 1
     dic[new_id] = agent_chain
-    return {"id": f"{new_id}"}
+    return {"id": new_id}
 
 
 @app.post("/new_msg")
