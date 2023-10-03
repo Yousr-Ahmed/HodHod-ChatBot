@@ -20,11 +20,15 @@ model = AzureChatOpenAI(
     deployment_name=os.getenv("DEPLOYMENT_NAME"),
 )
 embedding_model = OpenAIEmbeddings(deployment=azure_embeddings_deployment_name)
-tools = load_tools(["serpapi", "llm-math"], llm=model)
 os.makedirs("Documents", exist_ok=True)
 
 
-def create_vdb_search_tool():
+def create_tools():
+    # Check if any files exist in the Documents folder
+    if len(os.listdir("Documents")) == 0:
+        print("No files found in Documents folder")
+        return load_tools(["serpapi", "llm-math"], llm=model)
+    
     # Print number of txt files in directory
     loader = DirectoryLoader("", glob="Documents/*.*")
     documents = loader.load()
@@ -57,10 +61,10 @@ def create_vdb_search_tool():
         func=lambda query: vector_db_search({"question": query}),
         description="useful for when you need to answer questions about the Obeikan. Input should be a fully formed question. Output will be include the source document.",
     )
-    return vector_db_search_tool
+    return load_tools(["serpapi", "llm-math"], llm=model) + [vector_db_search_tool]
 
 
-tools.append(create_vdb_search_tool())
+tools = create_tools()
 
 # Define the API
 app = FastAPI()
@@ -109,9 +113,8 @@ async def upload_files(files: List[UploadFile] = File(...)):
         with open(f"Documents/{file.filename}", "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-    create_vdb_search_tool()
     global tools
-    tools[-1] = create_vdb_search_tool()
+    tools = create_tools()
 
     return {"detail": f"Files {', '.join(files_name)} uploaded successfully"}
 
@@ -121,8 +124,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
 def delete_files(file_name: str):
     if file_name in os.listdir("Documents"):
         os.remove(f"Documents/{file_name}")
-        create_vdb_search_tool()
         global tools
-        tools[-1] = create_vdb_search_tool()
+        tools = create_tools()
         return {"detail": f"File {file_name} deleted successfully"}
     return {"detail": f"File {file_name} not found"}
