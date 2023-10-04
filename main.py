@@ -2,7 +2,8 @@ import os
 import shutil
 from typing import List
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from langchain.agents import AgentType, Tool, initialize_agent, load_tools
 from langchain.chains import RetrievalQA
 from langchain.chat_models import AzureChatOpenAI
@@ -14,7 +15,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from pydantic import BaseModel
 
-from config import persist_directory, azure_embeddings_deployment_name
+from config import azure_embeddings_deployment_name, persist_directory
 
 model = AzureChatOpenAI(
     deployment_name=os.getenv("DEPLOYMENT_NAME"),
@@ -28,7 +29,7 @@ def create_tools():
     if len(os.listdir("Documents")) == 0:
         print("No files found in Documents folder")
         return load_tools(["serpapi", "llm-math"], llm=model)
-    
+
     # Print number of txt files in directory
     loader = DirectoryLoader("", glob="Documents/*.*")
     documents = loader.load()
@@ -68,6 +69,13 @@ tools = create_tools()
 
 # Define the API
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class Message(BaseModel):
