@@ -4,6 +4,7 @@ from typing import List
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from langchain.agents import AgentType, Tool, initialize_agent, load_tools
 from langchain.chains import RetrievalQA
 from langchain.chat_models import AzureChatOpenAI
@@ -86,7 +87,7 @@ class Message(BaseModel):
 dic = {}
 
 
-@app.get("/new_chat")
+@app.post("/new_chat")  # change to post later
 def new_chat():
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     agent_chain = initialize_agent(
@@ -129,11 +130,20 @@ async def upload_files(files: List[UploadFile] = File(...)):
 
 
 # Add a post method to the API that delete file from the Documents folder using os.remove()
-@app.post("/delete_files")
-def delete_files(file_name: str):
+@app.post("/delete_file")
+def delete_file(file_name: str):
     if file_name in os.listdir("Documents"):
         os.remove(f"Documents/{file_name}")
         global tools
         tools = create_tools()
         return {"detail": f"File {file_name} deleted successfully"}
     return {"detail": f"File {file_name} not found"}
+
+# add a post method to the API that download file from the Documents folder using FileResponse()
+@app.post("/download_file")
+def download_file(file_name: str):
+    if file_name in os.listdir("Documents"):
+        return FileResponse(f"Documents/{file_name}", filename=file_name)
+    return {"detail": f"File {file_name} not found"}
+
+
