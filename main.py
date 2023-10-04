@@ -86,7 +86,7 @@ class Message(BaseModel):
 dic = {}
 
 
-@app.post("/new_chat")
+@app.get("/new_chat")
 def new_chat():
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     agent_chain = initialize_agent(
@@ -95,6 +95,7 @@ def new_chat():
         agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
         verbose=True,
         memory=memory,
+        handle_parsing_errors=True,
     )
     new_id = len(dic) + 1
     dic[new_id] = agent_chain
