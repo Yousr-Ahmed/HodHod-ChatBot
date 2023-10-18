@@ -4,6 +4,11 @@
 
 name: Build and deploy Python app to Azure Web App - hodhod-chatbot
 
+env:
+  AZURE_WEBAPP_NAME: 'hodhod-chatbot'  # Name of Azure Web App
+  PYTHON_VERSION: '3.10'  # Python version to use
+  SLOT_NAME: 'Production'
+
 on:
   push:
     branches:
@@ -18,9 +23,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python version
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
       - name: Create and start virtual environment
         run: |
@@ -28,7 +34,9 @@ jobs:
           source venv/bin/activate
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
       - name: Zip artifact for deployment
@@ -54,6 +62,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: python-app
+          path: .
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
@@ -62,6 +71,6 @@ jobs:
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
-          app-name: 'hodhod-chatbot'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D9E64818D52F4DB5956F36A14703B72C }}
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: ${{ env.SLOT_NAME }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
