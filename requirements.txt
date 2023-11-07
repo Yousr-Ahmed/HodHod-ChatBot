@@ -1,6 +1,6 @@
-langchain
+langchain==0.0.330
 google-search-results
-openai
+openai==0.28.1
 unstructured[docx,pdf,pptx]
 chromadb
 tiktoken
