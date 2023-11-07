@@ -5,3 +5,4 @@ unstructured[docx,pdf,pptx]
 chromadb
 tiktoken
 python-decouple
+uvicorn[standard]
