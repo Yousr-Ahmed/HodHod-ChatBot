@@ -6,3 +6,4 @@ chromadb==0.4.16
 tiktoken==0.5.1
 python-decouple==3.8
 uvicorn[standard]==0.24.0.post1
+numexpr==2.8.7
