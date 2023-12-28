@@ -2,10 +2,13 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - hodhod-dev-chatbot
+name: Build and deploy Python app to Azure Web App - hodhod-chatbot
+
 env:
-  PYTHON_VERSION: '3.11'  # Python version to use
-  
+  AZURE_WEBAPP_NAME: 'hodhod-chatbot'  # Name of Azure Web App
+  PYTHON_VERSION: '3.10'  # Python version to use
+  SLOT_NAME: 'Production'
+
 on:
   push:
     branches:
@@ -17,25 +20,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python version
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
+      - name: Create and start virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
+
+      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+      - name: Zip artifact for deployment
+        run: zip release.zip ./* -r
+
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v3
         with:
           name: python-app
           path: |
-            . 
+            release.zip
             !venv/
 
   deploy:
@@ -51,11 +63,14 @@ jobs:
         with:
           name: python-app
           path: .
-          
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
-          app-name: 'hodhod-dev-chatbot'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_B77D64C8AA044B8BBFBDC084F17ABBAC }}
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: ${{ env.SLOT_NAME }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
